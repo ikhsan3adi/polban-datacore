@@ -6,4 +6,4 @@ import { DatahubController } from './datahub.controller';
   controllers: [DatahubController],
   providers: [DatahubService],
 })
-export class DatahubModule {}
+export class DataHubModule {}
