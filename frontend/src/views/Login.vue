@@ -57,19 +57,16 @@ const handleLogin = async () => {
     });
     router.push('/dashboard');
   } catch (e) {
-    console.error("Login error:", e);
     if (e.response) {
-      if (e.response.status === 401) {
-        authStore.error = "Login Gagal: Username atau Password salah (Ditolak DataHub).";
-      } else if (e.response.status === 502 || e.response.status === 504) {
-        authStore.error = "Gagal Terhubung: DataHub tidak merespon (Gateway Timeout).";
+      if (e.response.status === 401 || e.response.status === 400) {
+        authStore.error = "Username atau Password salah.";
       } else if (e.response.status === 500) {
-        authStore.error = "Internal Server Error pada DataCore.";
+        authStore.error = "Terjadi kesalahan internal pada server DataHub.";
       } else {
         authStore.error = e.response.data?.message || "Terjadi kesalahan saat login";
       }
     } else {
-      authStore.error = "Tidak dapat terhubung ke server";
+      authStore.error = "Gagal terhubung ke DataCore Backend. Periksa koneksi internet atau VPN kampus.";
     }
   }
 };
