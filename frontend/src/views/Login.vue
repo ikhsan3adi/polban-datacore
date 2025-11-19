@@ -10,6 +10,7 @@
           v-model="username" 
           required
           placeholder="Enter username or email"
+          autocomplete="username"
         />
       </div>
       <div class="form-group">
@@ -20,6 +21,7 @@
           v-model="password" 
           required
           placeholder="Enter password"
+          autocomplete="current-password"
         />
       </div>
       <div v-if="authStore.error" class="error-message alert alert-danger">
@@ -58,9 +60,11 @@ const handleLogin = async () => {
     console.error("Login error:", e);
     if (e.response) {
       if (e.response.status === 401) {
-        authStore.error = "Username/Password salah";
-      } else if (e.response.status >= 500) {
-        authStore.error = "Server DataCore/DataHub tidak merespon";
+        authStore.error = "Login Gagal: Username atau Password salah (Ditolak DataHub).";
+      } else if (e.response.status === 502 || e.response.status === 504) {
+        authStore.error = "Gagal Terhubung: DataHub tidak merespon (Gateway Timeout).";
+      } else if (e.response.status === 500) {
+        authStore.error = "Internal Server Error pada DataCore.";
       } else {
         authStore.error = e.response.data?.message || "Terjadi kesalahan saat login";
       }
