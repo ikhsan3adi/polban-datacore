@@ -1,6 +1,9 @@
 import { Expose, Type } from 'class-transformer';
 
 export class DataHubProvinsiDto {
+  @Expose({ name: 'provinsi_id' })
+  provinsiId: number;
+
   @Expose({ name: 'nama_provinsi' })
   namaProvinsi: string;
 
@@ -12,6 +15,9 @@ export class DataHubProvinsiDto {
 }
 
 export class DataHubWilayahDto {
+  @Expose({ name: 'wilayah_id' })
+  wilayahId: number;
+
   @Expose({ name: 'nama_wilayah' })
   namaWilayah: string;
 
