@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { DRIZZLE_PROVIDER } from 'src/database/drizzle/drizzle.provider';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from 'src/database/drizzle/schema';
-import { desc, eq, sql } from 'drizzle-orm';
+import { desc, eq, isNotNull, sql } from 'drizzle-orm';
 import { CreateEtlJobLogDto } from './dto/create-etl-job-log.dto';
 import { DataHubMahasiswaDto } from './datahub/dto/datahub-mahasiswa.dto';
 import {
@@ -147,16 +147,24 @@ export class EtlRepository {
   }
 
   async aggregateSltaData(): Promise<SltaAggregationResultDto[]> {
-    // GROUP BY angkatan, nama_slta
+    const sltaTypeSql = sql<string>`
+        (CASE
+          WHEN UPPER(${schema.factMahasiswa.namaSlta}) SIMILAR TO '(SMK|SME|SMKN|SMKS)%' THEN 'SMK'
+          WHEN UPPER(${schema.factMahasiswa.namaSlta}) SIMILAR TO '(SMA|SPMA|SMAN|SMAS)%' THEN 'SMA'
+          WHEN UPPER(${schema.factMahasiswa.namaSlta}) SIMILAR TO '(MA|MAN|MAS)%' THEN 'MA'
+          ELSE 'Lainnya'
+        END)
+      `.as('jenis');
+
     return await this.db
       .select({
         angkatan: schema.factMahasiswa.angkatan,
-        namaSlta: schema.factMahasiswa.namaSlta,
+        jenis: sltaTypeSql,
         total: sql<number>`count(*)::int`,
       })
       .from(schema.factMahasiswa)
-      .where(sql`${schema.factMahasiswa.namaSlta} IS NOT NULL`)
-      .groupBy(schema.factMahasiswa.angkatan, schema.factMahasiswa.namaSlta);
+      .where(isNotNull(schema.factMahasiswa.namaSlta))
+      .groupBy(schema.factMahasiswa.angkatan, sltaTypeSql);
   }
 
   async aggregateJalurDaftarData(): Promise<JalurDaftarAggregationResultDto[]> {

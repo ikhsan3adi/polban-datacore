@@ -90,15 +90,11 @@ export class EtlService {
 
     // 3. SLTA
     const sltaDataRaw = await this.etlRepository.aggregateSltaData();
-    const guestSltaMapped = this.groupByAndSum(sltaDataRaw, 'namaSlta').map(
-      (item) => ({
-        jenis: item.namaSlta,
-        total: item.total,
-      }),
-    );
+    const guestSltaSummed = this.groupByAndSum(sltaDataRaw, 'jenis');
+
     await this.etlRepository.saveAggregateResult(
       GUEST_CACHE_KEYS.MAHASISWA_JENIS_SLTA,
-      guestSltaMapped,
+      guestSltaSummed,
     );
     await this.etlRepository.saveAggregateResult(
       KEMAHASISWAAN_CACHE_KEYS.JENIS_SLTA,
@@ -115,13 +111,12 @@ export class EtlService {
       guestDomisiliAll,
     );
 
-    // B. Simpan Guest Domisili Per Provinsi (Group by Wilayah/Kota)
+    // B. Simpan Guest Domisili Per Provinsi (Group by Wilayah)
     const uniqueProvinces = [
       ...new Set(domisiliRaw.map((d) => d.namaProvinsi)),
     ];
 
     for (const prov of uniqueProvinces) {
-      // Filter data hanya untuk provinsi ini
       const dataProv = domisiliRaw.filter((d) => d.namaProvinsi === prov);
       const transformedProv = this.transformDomisiliForGuestProvinsi(
         prov,
