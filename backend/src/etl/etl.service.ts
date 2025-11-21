@@ -8,7 +8,6 @@ import {
   AKADEMIK_CACHE_KEYS,
 } from '../constants';
 import { DomisiliAggregationResultDto } from './dto/aggregation-result.dto';
-import { toSnakeCase } from 'drizzle-orm/casing';
 
 @Injectable()
 export class EtlService {
@@ -157,7 +156,9 @@ export class EtlService {
         dataProv,
       );
 
-      const cacheKey = `${GUEST_CACHE_KEYS.MAHASISWA_DOMISILI_PROVINSI_PREFIX}${toSnakeCase(prov)}`;
+      const provSlug = prov.toLowerCase().replace(/\s+/g, '_');
+
+      const cacheKey = `${GUEST_CACHE_KEYS.MAHASISWA_DOMISILI_PROVINSI_PREFIX}${provSlug}`;
 
       await this.etlRepository.saveAggregateResult(cacheKey, transformedProv);
     }
