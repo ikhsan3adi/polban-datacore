@@ -30,7 +30,11 @@ export class JobsService implements OnModuleInit {
 
   // Schedules
   async updateSchedule(dto: UpdateScheduleDto) {
-    await this.jobsRepository.upsertSchedule(dto.jobName, dto.cronExpression);
+    await this.jobsRepository.upsertSchedule(
+      dto.jobName,
+      dto.cronExpression,
+      dto.description,
+    );
 
     await this.syncBullMqSchedule(dto.jobName, dto.cronExpression);
 

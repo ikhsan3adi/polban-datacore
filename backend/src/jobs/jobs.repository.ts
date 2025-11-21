@@ -20,19 +20,25 @@ export class JobsRepository {
     });
   }
 
-  async upsertSchedule(jobName: string, cronExpression: string) {
+  async upsertSchedule(
+    jobName: string,
+    cronExpression: string,
+    description?: string,
+  ) {
     return await this.db
       .insert(schema.jobSchedules)
       .values({
         jobName,
         cronExpression,
         isActive: true,
+        description,
       })
       .onConflictDoUpdate({
         target: schema.jobSchedules.jobName,
         set: {
           cronExpression,
           isActive: true,
+          description,
           updatedAt: new Date(),
         },
       });

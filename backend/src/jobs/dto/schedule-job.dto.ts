@@ -10,4 +10,7 @@ export class UpdateScheduleDto {
   @IsNotEmpty()
   @IsString()
   cronExpression: string;
+
+  @IsString()
+  description: string;
 }

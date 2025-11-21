@@ -12,7 +12,7 @@ export class JobsController {
     return this.jobsService.addJobToQueue(createJobDto);
   }
 
-  @Put('schedule')
+  @Put('schedules')
   async updateSchedule(@Body() dto: UpdateScheduleDto) {
     return this.jobsService.updateSchedule(dto);
   }
