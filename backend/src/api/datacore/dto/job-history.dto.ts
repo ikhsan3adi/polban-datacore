@@ -6,6 +6,7 @@ export class JobHistoryItemDto {
   startTime: Date;
   endTime: Date | null;
   duration: string;
+  logMessage?: string;
 }
 
 export class JobHistoryListDto {
