@@ -24,37 +24,36 @@
       <!-- Card 1: Total Mahasiswa -->
       <div class="stat-card">
         <h3>Total Mahasiswa</h3>
-        <div class="stat-value">{{ dashboardStore.stats?.total_mahasiswa ?? '-' }}</div>
+        <div class="stat-value">{{ dashboardStore.studentCount ?? '-' }}</div>
         <div class="stat-desc">Data terintegrasi</div>
       </div>
 
       <!-- Card 2: Status Sinkronisasi -->
       <div class="stat-card">
         <h3>Status Sinkronisasi</h3>
-        <div class="status-badge" :class="getStatusClass(dashboardStore.stats?.last_sync_status)">
-          {{ dashboardStore.stats?.last_sync_status || 'UNKNOWN' }}
+        <div class="status-badge" :class="getStatusClass(dashboardStore.syncStatus)">
+          {{ dashboardStore.syncStatus || 'UNKNOWN' }}
         </div>
-        <div class="stat-desc">Terakhir: {{ formatRelativeTime(dashboardStore.stats?.last_sync_time) }}</div>
+        <div class="stat-desc">Terakhir: {{ formatRelativeTime(dashboardStore.lastSyncTime) }}</div>
       </div>
 
       <!-- Card 3: Antrian Job -->
       <div class="stat-card">
         <h3>Antrian Job</h3>
-        <div class="stat-value">{{ dashboardStore.stats?.jobs_in_queue ?? 0 }}</div>
-        <div class="stat-desc">Proses pending</div>
+        <div class="stat-value">
+          {{ dashboardStore.activeQueue }}
+          <span class="sub-value" v-if="dashboardStore.failedQueue > 0">
+            ({{ dashboardStore.failedQueue }} Failed)
+          </span>
+        </div>
+        <div class="stat-desc">Active & Waiting</div>
       </div>
 
-      <!-- Card 4: Info Tambahan (Placeholder) -->
-      <div class="stat-card info-card">
-        <h3>System Info</h3>
-        <div class="info-item">
-          <span>Environment:</span>
-          <strong>Production</strong>
-        </div>
-        <div class="info-item">
-          <span>Version:</span>
-          <strong>v1.0.0</strong>
-        </div>
+      <!-- Card 4: Total Dosen -->
+      <div class="stat-card">
+        <h3>Total Dosen</h3>
+        <div class="stat-value">{{ dashboardStore.lecturerCount ?? '-' }}</div>
+        <div class="stat-desc">Data terintegrasi</div>
       </div>
     </div>
   </div>
@@ -77,12 +76,12 @@ const handleLogout = () => {
 };
 
 const getStatusClass = (status) => {
-  switch (status) {
-    case 'SUCCESS': return 'status-success';
-    case 'FAILED': return 'status-failed';
-    case 'PENDING': return 'status-pending';
-    default: return 'status-unknown';
-  }
+  if (!status) return 'status-unknown';
+  const s = status.toLowerCase();
+  if (s === 'success') return 'status-success';
+  if (s === 'failed') return 'status-failed';
+  if (s === 'pending' || s === 'running') return 'status-pending';
+  return 'status-unknown';
 };
 
 const formatRelativeTime = (isoString) => {
@@ -172,6 +171,13 @@ onUnmounted(() => {
   font-weight: bold;
   color: #2c3e50;
   margin-bottom: 5px;
+}
+
+.sub-value {
+  font-size: 14px;
+  color: #dc3545;
+  font-weight: normal;
+  margin-left: 5px;
 }
 
 .stat-desc {

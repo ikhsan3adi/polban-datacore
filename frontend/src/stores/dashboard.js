@@ -7,6 +7,14 @@ export const useDashboardStore = defineStore('dashboard', {
     loading: false,
     error: null
   }),
+  getters: {
+    syncStatus: (state) => state.stats?.lastSync?.status,
+    lastSyncTime: (state) => state.stats?.lastSync?.finishedAt,
+    studentCount: (state) => state.stats?.data?.totalMahasiswa,
+    lecturerCount: (state) => state.stats?.data?.totalDosen,
+    activeQueue: (state) => (state.stats?.queue?.active || 0) + (state.stats?.queue?.waiting || 0),
+    failedQueue: (state) => state.stats?.queue?.failed || 0
+  },
   actions: {
     async fetchStats() {
       this.loading = true;
