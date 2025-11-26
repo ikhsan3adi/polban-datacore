@@ -5,7 +5,9 @@ import {
   Query,
   UseInterceptors,
   UseGuards,
+  Version,
 } from '@nestjs/common';
+import { CacheInterceptor } from '@nestjs/cache-manager';
 import { ApiTags } from '@nestjs/swagger';
 import { AkademikService } from './akademik.service';
 import { AkademikTotalArrayDto } from './dto/akademik-total-array.dto';
@@ -14,14 +16,16 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { UserRole } from '../../constants/roles.constants';
 import { Roles } from '../../common/decorators/roles.decorator';
 
+@ApiTags('Akademik')
+@Controller('akademik')
 @UseInterceptors(ClassSerializerInterceptor)
-@Controller('v1/akademik')
+@UseInterceptors(CacheInterceptor)
 @UseGuards(AuthGuard, RolesGuard)
 @Roles(UserRole.DATACORE_ADMIN, UserRole.DATAVIEW_INTERNAL)
-@ApiTags('Akademik')
 export class AkademikController {
   constructor(private readonly akademikService: AkademikService) {}
 
+  @Version('1')
   @Get('tipe-tes-masuk')
   async getTipeTesMasuk(
     @Query('angkatan') angkatan?: number,
