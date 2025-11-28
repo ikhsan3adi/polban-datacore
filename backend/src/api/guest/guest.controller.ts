@@ -38,12 +38,7 @@ export class GuestController {
     return this.guestService.getJenisSltaData();
   }
 
-  @Version('1')
-  @Get('akademik/tipe-tes-masuk')
-  async getJenisSlta(): Promise<GuestTotalArrayDto> {
-    return this.guestService.getTipeTesMasukData();
-  }
-
+  
   @Version('1')
   @Get('mahasiswa/domisili')
   async getDomisili(
@@ -56,6 +51,10 @@ export class GuestController {
     // Mengembalikan data semua provinsi (All)
     return this.guestService.getDomisiliAllData();
   }
-
-  // TODO: Rasio Dosen Mhs
+  
+  @Version('1')
+  @Get('akademik/tipe-tes-masuk')
+  async getTipeTesMasuk(): Promise<GuestTotalArrayDto> {
+    return this.guestService.getTipeTesMasukData();
+  }// TODO: Rasio Dosen Mhs
 }
