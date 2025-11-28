@@ -39,6 +39,12 @@ export class GuestController {
   }
 
   @Version('1')
+  @Get('akademik/tipe-tes-masuk')
+  async getJenisSlta(): Promise<GuestTotalArrayDto> {
+    return this.guestService.getTipeTesMasukData();
+  }
+
+  @Version('1')
   @Get('mahasiswa/domisili')
   async getDomisili(
     @Query('provinsi') provinsi?: string,
