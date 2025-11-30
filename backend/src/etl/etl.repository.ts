@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { count, desc, eq, sql } from 'drizzle-orm';
+import { count, desc, eq, ilike, or, SQL, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { JOB_NAMES } from '../constants';
+import { JOB_NAMES, MV_NAMES } from '../constants';
 import { DRIZZLE_PROVIDER } from '../database/drizzle/drizzle.provider';
 import * as schema from '../database/drizzle/schema';
 import { DataHubAkademikDto } from './datahub/dto/datahub-akademik.dto';
@@ -217,4 +217,84 @@ export class EtlRepository {
   async getTotalFactAkademik(): Promise<number> {
     return 0;
   }
+
+  // INSPECTOR
+
+  async getMaterializedViewDataPaged(
+    mvName: string,
+    page: number,
+    limit: number,
+    search?: string,
+  ): Promise<{ data: any[]; total: number }> {
+    const config = this.mvConfig[mvName];
+    if (!config) {
+      throw new Error(`Materialized View '${mvName}' is not configured.`);
+    }
+
+    const { table, searchFields } = config;
+    const offset = (page - 1) * limit;
+
+    // Build Filter Condition (Dynamic Search)
+    let whereCondition: SQL | undefined = undefined;
+    if (search && searchFields.length > 0) {
+      const searchConditions = searchFields.map((field) =>
+        ilike(sql`${field}::text`, `%${search}%`),
+      );
+
+      whereCondition = or(...searchConditions);
+    }
+
+    const dataQuery = this.db.select().from(table).limit(limit).offset(offset);
+
+    if (whereCondition) {
+      dataQuery.where(whereCondition);
+    }
+
+    const countQuery = this.db.select({ count: count() }).from(table);
+
+    if (whereCondition) {
+      countQuery.where(whereCondition);
+    }
+
+    const [data, totalResult] = await Promise.all([dataQuery, countQuery]);
+
+    return {
+      data,
+      total: totalResult[0].count,
+    };
+  }
+
+  private mvConfig = {
+    [MV_NAMES.MAHASISWA_GENDER]: {
+      table: schema.mvMahasiswaGender,
+      searchFields: [schema.mvMahasiswaGender.jenis],
+    },
+    [MV_NAMES.MAHASISWA_AGAMA]: {
+      table: schema.mvMahasiswaAgama,
+      searchFields: [schema.mvMahasiswaAgama.agama],
+    },
+    [MV_NAMES.MAHASISWA_SLTA_KATEGORI]: {
+      table: schema.mvMahasiswaSltaKategori,
+      searchFields: [schema.mvMahasiswaSltaKategori.jenis],
+    },
+    [MV_NAMES.MAHASISWA_JALUR_DAFTAR]: {
+      table: schema.mvMahasiswaJalurDaftar,
+      searchFields: [schema.mvMahasiswaJalurDaftar.tipe],
+    },
+    [MV_NAMES.MAHASISWA_TOTAL]: {
+      table: schema.mvMahasiswaTotal,
+      searchFields: [],
+    },
+    [MV_NAMES.MAHASISWA_DOMISILI_KOTA]: {
+      table: schema.mvMahasiswaDomisili,
+      searchFields: [
+        schema.mvMahasiswaDomisili.namaProvinsi,
+        schema.mvMahasiswaDomisili.namaWilayah,
+        schema.mvMahasiswaDomisili.provinsiLat,
+        schema.mvMahasiswaDomisili.provinsiLng,
+        schema.mvMahasiswaDomisili.wilayahLat,
+        schema.mvMahasiswaDomisili.wilayahLng,
+      ],
+    },
+  };
 }
