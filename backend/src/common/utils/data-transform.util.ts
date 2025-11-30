@@ -1,4 +1,4 @@
-import { DomisiliAggregationResultDto } from '../../etl/dto/aggregation-result.dto';
+import { MvMhsDomisiliKotaResultDto } from '../dto/mv-result.dto';
 
 export class DataTransformUtil {
   public static groupByAndSum<T extends Record<string, any>>(
@@ -22,7 +22,7 @@ export class DataTransformUtil {
    * Mengelompokkan data berdasarkan Provinsi
    */
   public static transformDomisiliForGuestAll(
-    data: DomisiliAggregationResultDto[],
+    data: MvMhsDomisiliKotaResultDto[],
   ) {
     const provMap = new Map<
       string,
@@ -50,7 +50,7 @@ export class DataTransformUtil {
    */
   public static transformDomisiliForGuestProvinsi(
     provinsiName: string,
-    data: DomisiliAggregationResultDto[],
+    data: MvMhsDomisiliKotaResultDto[],
   ) {
     const kotaList = data.map((item) => ({
       kota: item.namaWilayah,

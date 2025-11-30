@@ -36,7 +36,7 @@ export class GuestService {
       total: item.total,
     }));
 
-    return { data: finalData } as any as GuestTotalArrayDto;
+    return { data: finalData } as GuestTotalArrayDto;
   }
 
   async getDomisiliAllData(): Promise<GuestDomisiliAllDto> {
@@ -49,6 +49,10 @@ export class GuestService {
   ): Promise<GuestDomisiliProvinsiDto> {
     const rawData =
       await this.guestRepository.getAggregatedDomisiliData(provinsi);
+
+    if (!rawData.length) {
+      return { provinsi, data: [] };
+    }
 
     return DataTransformUtil.transformDomisiliForGuestProvinsi(
       rawData[0].namaProvinsi,
