@@ -6,7 +6,7 @@ class InspectorService {
    * @returns {Promise} Response containing array of view names
    */
   getViewList() {
-    return api.get('/datacore/views');
+    return api.get('/datacore/inspector/mv');
   }
 
   /**
@@ -15,7 +15,7 @@ class InspectorService {
    * @returns {Promise} Response containing array of row objects
    */
   getViewData(viewName) {
-    return api.get(`/datacore/views/${encodeURIComponent(viewName)}`);
+    return api.get(`/datacore/inspector/mv/${encodeURIComponent(viewName)}`);
   }
 }
 
