@@ -20,4 +20,14 @@ export class DataHubController {
 
     return this.dataHubService.getMahasiswaData(req['datacore_token'], date);
   }
+
+  @Get('debug/akademik')
+  async debugGetAkademik(
+    @Request() req: Request,
+    @Query('since') since?: string,
+  ) {
+    const date = since ? new Date(since) : undefined;
+
+    return this.dataHubService.getAkademikData(req['datacore_token'], date);
+  }
 }

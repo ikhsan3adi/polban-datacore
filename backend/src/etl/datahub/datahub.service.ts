@@ -59,7 +59,32 @@ export class DataHubService {
     token: string,
     updatedSince?: Date,
   ): Promise<DataHubAkademikDto[]> {
-    return [];
+    const url = `${this.baseUrl}${DATAHUB_ENDPOINTS.AKADEMIK}`;
+    const params = updatedSince
+      ? { updated_since: updatedSince.toISOString() }
+      : {};
+
+    try {
+      const response = await lastValueFrom(
+        this.httpService.get(url, {
+          params,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+      );
+
+      const rawData = response.data?.data || [];
+
+      // @ts-expect-error [class-transformer type inference limitation: plainToInstance does not infer array types correctly]
+      return plainToInstance(DataHubAkademikDto, rawData, {
+        excludeExtraneousValues: true,
+      });
+    } catch (error) {
+      const errorMsg = error?.message || String(error);
+      this.logger.error(`Failed to fetch akademik data from ${url}`, errorMsg);
+      throw error;
+    }
   }
 
   // TODO: Implement getDosenData
