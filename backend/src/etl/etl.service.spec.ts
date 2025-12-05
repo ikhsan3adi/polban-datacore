@@ -3,11 +3,13 @@ import { JOB_NAMES } from '../constants';
 import { DataHubService } from './datahub/datahub.service';
 import { EtlRepository } from './etl.repository';
 import { EtlService } from './etl.service';
+import { AuthService } from '../auth/auth.service';
 
 describe('EtlService', () => {
   let service: EtlService;
   let repository: EtlRepository;
   let dataHubService: DataHubService;
+  let authService: AuthService;
 
   const mockEtlRepository = {
     startJobLog: jest.fn(),
@@ -30,18 +32,24 @@ describe('EtlService', () => {
     getAkademikData: jest.fn(),
   };
 
+  const mockAuthService = {
+    getSystemToken: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EtlService,
         { provide: EtlRepository, useValue: mockEtlRepository },
         { provide: DataHubService, useValue: mockDataHubService },
+        { provide: AuthService, useValue: mockAuthService },
       ],
     }).compile();
 
     service = module.get<EtlService>(EtlService);
     repository = module.get<EtlRepository>(EtlRepository);
     dataHubService = module.get<DataHubService>(DataHubService);
+    authService = module.get<AuthService>(AuthService);
 
     jest.clearAllMocks();
   });
@@ -49,6 +57,9 @@ describe('EtlService', () => {
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
+
+  const systemToken = 'system-token';
+  mockAuthService.getSystemToken.mockResolvedValue(systemToken);
 
   describe('Orchestration (runFullSync)', () => {
     it('should execute full sync flow (sync all -> aggregate all) successfully', async () => {
@@ -72,7 +83,10 @@ describe('EtlService', () => {
       expect(dataHubService.getDosenData).toHaveBeenCalled();
       expect(dataHubService.getAkademikData).toHaveBeenCalled();
 
-      // 3. Check Aggregation Calls
+      // 3. Check Authentication Calls
+      expect(authService.getSystemToken).toHaveBeenCalledTimes(3);
+
+      // 4. Check Aggregation Calls
       // Should call ALL aggregate methods
       expect(repository.refreshAggregatedGenderData).toHaveBeenCalled();
       expect(repository.refreshAggregatedAgamaData).toHaveBeenCalled();
@@ -121,7 +135,9 @@ describe('EtlService', () => {
       expect(repository.getLastSuccessfulSync).toHaveBeenCalledWith(
         JOB_NAMES.SYNC_MAHASISWA,
       );
+      expect(authService.getSystemToken).toHaveBeenCalled();
       expect(dataHubService.getMahasiswaData).toHaveBeenCalledWith(
+        systemToken,
         lastSyncDate,
       );
       expect(repository.saveFactMahasiswa).toHaveBeenCalledWith(mockData);
@@ -130,32 +146,55 @@ describe('EtlService', () => {
 
     it('syncDosen should fetch and save data', async () => {
       const jobId = 'job-dosen';
+      const lastSyncDate = new Date('2024-01-01');
+      const mockData = [{ dosenId: 1 }];
+
       mockEtlRepository.startJobLog.mockResolvedValue(jobId);
-      mockEtlRepository.getLastSuccessfulSync.mockResolvedValue(null);
-      mockDataHubService.getDosenData.mockResolvedValue([]);
+      mockEtlRepository.getLastSuccessfulSync.mockResolvedValue(lastSyncDate);
+      mockDataHubService.getDosenData.mockResolvedValue(mockData);
 
       await service.syncDosen('cron');
 
+      expect(repository.startJobLog).toHaveBeenCalledWith({
+        jobName: JOB_NAMES.SYNC_DOSEN,
+        triggeredBy: 'cron',
+      });
       expect(repository.getLastSuccessfulSync).toHaveBeenCalledWith(
         JOB_NAMES.SYNC_DOSEN,
       );
-      expect(dataHubService.getDosenData).toHaveBeenCalledWith(null);
-      expect(repository.saveFactDosen).toHaveBeenCalledWith([]);
+      expect(authService.getSystemToken).toHaveBeenCalled();
+      expect(dataHubService.getDosenData).toHaveBeenCalledWith(
+        systemToken,
+        lastSyncDate,
+      );
+      expect(repository.saveFactDosen).toHaveBeenCalledWith(mockData);
       expect(repository.finishJobLog).toHaveBeenCalledWith(jobId, 'success');
     });
 
     it('syncAkademik should fetch and save data', async () => {
       const jobId = 'job-akademik';
+      const lastSyncDate = new Date('2024-01-01');
+      const mockData = [{ mahasiswaId: 1 }];
+
       mockEtlRepository.startJobLog.mockResolvedValue(jobId);
-      mockDataHubService.getAkademikData.mockResolvedValue([]);
+      mockEtlRepository.getLastSuccessfulSync.mockResolvedValue(lastSyncDate);
+      mockDataHubService.getAkademikData.mockResolvedValue(mockData);
 
       await service.syncAkademik('manual');
 
+      expect(repository.startJobLog).toHaveBeenCalledWith({
+        jobName: JOB_NAMES.SYNC_AKADEMIK,
+        triggeredBy: 'manual',
+      });
       expect(repository.getLastSuccessfulSync).toHaveBeenCalledWith(
         JOB_NAMES.SYNC_AKADEMIK,
       );
-      expect(dataHubService.getAkademikData).toHaveBeenCalled();
-      expect(repository.saveFactAkademik).toHaveBeenCalled();
+      expect(authService.getSystemToken).toHaveBeenCalled();
+      expect(dataHubService.getAkademikData).toHaveBeenCalledWith(
+        systemToken,
+        lastSyncDate,
+      );
+      expect(repository.saveFactAkademik).toHaveBeenCalledWith(mockData);
       expect(repository.finishJobLog).toHaveBeenCalledWith(jobId, 'success');
     });
   });
