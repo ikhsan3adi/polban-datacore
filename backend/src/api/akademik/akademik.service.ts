@@ -1,4 +1,4 @@
-import { Injectable, NotImplementedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { AkademikRepository } from './akademik.repository';
 import { AkademikTotalArrayDto } from './dto/akademik-total-array.dto';
 import { AkademikDistribusiNilaiDto } from './dto/akademik-distribusi-nilai.dto';
@@ -18,13 +18,10 @@ export class AkademikService {
     prodi?: string,
     kelas?: string,
   ): Promise<AkademikTotalArrayDto> {
-    let result = await this.akademikRepository.getAggregatedJalurDaftarData();
+    const result =
+      await this.akademikRepository.getAggregatedJalurDaftarData(angkatan);
 
-    if (angkatan) {
-      result = result
-        .filter((item) => item.angkatan == angkatan)
-        .map((item) => ({ ...item, angkatan: undefined }));
-    }
+    // Filter Prodi/Kelas masih di Service (karena belum ada di MV)
     if (prodi) {
       // const slug = prodi.toLowerCase().replace(/\s+/g, '_');
       // result = result
@@ -51,86 +48,82 @@ export class AkademikService {
     angkatan?: number,
     prodi?: string,
   ): Promise<AkademikDistribusiNilaiDto> {
-    let result =
-      await this.akademikRepository.getAggregatedDistribusiNilaiData();
+    const rawData =
+      await this.akademikRepository.getAggregatedDistribusiNilaiData(angkatan);
 
-    if (angkatan) {
-      result = result
-        .filter((item) => item.angkatan == angkatan);
-    }
-    if (prodi) {
-      // const slug = prodi.toLowerCase().replace(/\s+/g, '_');
-      // result = result
-      //   .filter((item) => {
-      //     const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
-      //     return itemSlug == slug;
-      //   })
-      //   .map((item) => ({ ...item, prodi: undefined }));
-    }
+    // if (prodi) {
+    //   const slug = prodi.toLowerCase().replace(/\s+/g, '_');
+    //   rawData = rawData
+    //     .filter((item) => {
+    //       const itemSlug = item.prodi?.toLowerCase().replace(/\s+/g, '_');
+    //       return itemSlug == slug;
+    //     })
+    //     .map((item) => ({ ...item, prodi: undefined }));
+    // }
 
-    let data = result.reduce<Record<string, MataKuliahNilaiDto>>((acc,item) => {
-      const key = item.kodeMk;
-      if(!acc[key]) {
-        acc[key] = {
-          mataKuliah: item.namaMk,
-          indeksNilai: [],
-        };
+    // <Mata Kuliah, Indeks Nilai>
+    const groupedByMk = new Map<string, any>();
+
+    rawData.forEach((row) => {
+      if (!groupedByMk.has(row.kodeMk)) {
+        groupedByMk.set(row.kodeMk, {
+          mata_kuliah: row.namaMk,
+          indeks_nilai: [],
+        });
       }
-      acc[key].indeksNilai.push({
-        indeks: item.nilaiHuruf,
-        total: item.total
+      const entry = groupedByMk.get(row.kodeMk);
+      entry.indeks_nilai.push({
+        indeks: row.nilaiHuruf,
+        total: row.total,
       });
-      return acc;
-    },
-    {},
-  );
+    });
 
-    return { angkatan, prodi, data: Object.values(data)};
+    const finalData = Array.from(groupedByMk.values());
+
+    return { angkatan: angkatan || 'All', prodi, data: finalData };
   }
 
   async getTrenIpRataRataData(
     angkatan?: number,
   ): Promise<AkademikTrenIpRataRataDto> {
-    let raw = await this.akademikRepository.getAggregatedTrenIpRataRataData();
-    let filtered = raw;
-    if (angkatan) {
-      filtered = raw.filter((item) => item.angkatan == angkatan);
-    }
-    let data: SemesterIpDto[] = filtered.map((item) => ({
+    const rawData =
+      await this.akademikRepository.getAggregatedTrenIpRataRataData(angkatan);
+
+    const mappedData = rawData.map((item) => ({
       semester: item.semesterUrut,
-      ip: item.ipRataRata,
+      ip: Number(item.ipRataRata.toFixed(2)),
     }));
 
-    return {
-      angkatan, data};
+    return { angkatan: angkatan || 'All', data: mappedData };
   }
 
-  // Mengambil data tren IP tertinggi.
-  // Jika parameter 'semester' diberikan, akan mengembalikan IP tertinggi per angkatan untuk semester tsb.
-  // Jika tidak (parameter 'angkatan' diberikan), akan mengembalikan IP tertinggi per semester untuk angkatan tsb.
   async getTrenIpTertinggiData(
     semester?: number,
     angkatan?: number,
   ): Promise<AkademikTrenIpTertinggiDto> {
-    let result = await this.akademikRepository.getAggregatedTrenIpTertinggiData();
-    let data;
-    if (angkatan) {
-      result = result.filter((item) => item.angkatan == angkatan);
-      let dataakademik: AkademikIpDto[] = result.map((item) => ({
-      angkatan: angkatan ? item.angkatan: undefined,
-      ip: item.ipRataRata,
+    const rawData =
+      await this.akademikRepository.getAggregatedTrenIpTertinggiData(
+        angkatan,
+        semester,
+      );
+
+    let mappedData: (SemesterIpDto | AngkatanIpDto)[] = [];
+
+    // Jika filter Semester Tampilkan per Angkatan
+    if (semester && !angkatan) {
+      mappedData = rawData.map((item) => ({
+        angkatan: String(item.angkatan),
+        ip: item.ipTertinggi,
       }));
-      data = dataakademik;
+    }
+    // Tampilkan per Semester
+    else {
+      mappedData = rawData.map((item) => ({
+        semester: item.semesterUrut,
+        ip: item.ipTertinggi,
+      }));
     }
 
-    // if (semester) {
-    //   result = result.filter((item) => item.semester == semester);
-    //   let datasemester: SemesterIpDto[] = result.map((item) => ({
-    //   angkatan: angkatan ? item.angkatan : undefined,
-    //   ip: item.ipRataRata,
-    //   }));
-    // }
-
-    return { angkatan, semester, data};
+    return { angkatan, semester, data: mappedData };
   }
 }
