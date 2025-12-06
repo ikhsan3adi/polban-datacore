@@ -12,14 +12,12 @@ export class KemahasiswaanService {
     angkatan?: number,
     prodi?: string,
   ): Promise<KemahasiswaanTotalArrayDto> {
-    let result =
-      await this.kemahasiswaanRepository.getAggregatedJumlahMahasiswaData();
+    const result =
+      await this.kemahasiswaanRepository.getAggregatedJumlahMahasiswaData(
+        angkatan,
+      );
 
-    if (angkatan) {
-      result = result
-        .filter((item) => item.angkatan == angkatan)
-        .map((item) => ({ ...item, angkatan: undefined }));
-    }
+    // Filter Prodi/Kelas masih di Service (Logic Future Proofing)
     if (prodi) {
       // const slug = prodi.toLowerCase().replace(/\s+/g, '_');
       // result = result
@@ -38,13 +36,10 @@ export class KemahasiswaanService {
     prodi?: string,
     kelas?: string,
   ): Promise<KemahasiswaanTotalArrayDto> {
-    let result = await this.kemahasiswaanRepository.getAggregatedGenderData();
+    const result =
+      await this.kemahasiswaanRepository.getAggregatedGenderData(angkatan);
 
-    if (angkatan) {
-      result = result
-        .filter((item) => item.angkatan == angkatan)
-        .map((item) => ({ ...item, angkatan: undefined }));
-    }
+    // Filter Prodi/Kelas masih di Service
     if (prodi) {
       // const slug = prodi.toLowerCase().replace(/\s+/g, '_');
       // result = result
@@ -72,13 +67,9 @@ export class KemahasiswaanService {
     prodi?: string,
     kelas?: string,
   ): Promise<KemahasiswaanTotalArrayDto> {
-    let result = await this.kemahasiswaanRepository.getAggregatedSltaData();
+    const result =
+      await this.kemahasiswaanRepository.getAggregatedSltaData(angkatan);
 
-    if (angkatan) {
-      result = result
-        .filter((item) => item.angkatan == angkatan)
-        .map((item) => ({ ...item, angkatan: undefined }));
-    }
     if (prodi) {
       // const slug = prodi.toLowerCase().replace(/\s+/g, '_');
       // result = result
@@ -106,13 +97,9 @@ export class KemahasiswaanService {
     prodi?: string,
     kelas?: string,
   ): Promise<KemahasiswaanTotalArrayDto> {
-    let result = await this.kemahasiswaanRepository.getAggregatedAgamaData();
+    const result =
+      await this.kemahasiswaanRepository.getAggregatedAgamaData(angkatan);
 
-    if (angkatan) {
-      result = result
-        .filter((item) => item.angkatan == angkatan)
-        .map((item) => ({ ...item, angkatan: undefined }));
-    }
     if (prodi) {
       // const slug = prodi.toLowerCase().replace(/\s+/g, '_');
       // result = result
