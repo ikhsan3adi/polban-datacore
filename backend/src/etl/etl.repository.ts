@@ -425,5 +425,30 @@ export class EtlRepository {
         schema.mvMahasiswaDomisili.wilayahLng,
       ],
     },
+
+    [MV_NAMES.AKADEMIK_DISTRIBUSI_NILAI]: {
+      table: schema.mvAkademikDistribusiNilai,
+      searchFields: [
+        schema.mvAkademikDistribusiNilai.angkatan,
+        schema.mvAkademikDistribusiNilai.kodeMk,
+        schema.mvAkademikDistribusiNilai.namaMk,
+        schema.mvAkademikDistribusiNilai.sks,
+        schema.mvAkademikDistribusiNilai.nilaiHuruf,
+      ],
+    },
+    [MV_NAMES.AKADEMIK_TREN_IP_RATA_RATA]: {
+      table: schema.mvAkademikTrenIpRataRata,
+      searchFields: [
+        schema.mvAkademikTrenIpRataRata.angkatan,
+        schema.mvAkademikTrenIpRataRata.semesterUrut,
+      ],
+    },
+    [MV_NAMES.AKADEMIK_TREN_IP_TERTINGGI]: {
+      table: schema.mvAkademikTrenIpTertinggi,
+      searchFields: [
+        schema.mvAkademikTrenIpTertinggi.angkatan,
+        schema.mvAkademikTrenIpTertinggi.semesterUrut,
+      ],
+    },
   };
 }

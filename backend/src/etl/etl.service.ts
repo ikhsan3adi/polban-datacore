@@ -26,6 +26,7 @@ export class EtlService {
         await this.syncAkademikInternal();
 
         // 2. Aggregate All
+        this.logger.debug('Aggregating All Data...');
         await this.etlRepository.refreshAllAggregatedData();
       },
     );
