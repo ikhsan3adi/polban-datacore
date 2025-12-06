@@ -15,6 +15,11 @@ import { AuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { UserRole } from '../../constants/roles.constants';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { AkademikDistribusiNilaiDto } from './dto/akademik-distribusi-nilai.dto';
+import {
+  AkademikTrenIpRataRataDto,
+  AkademikTrenIpTertinggiDto,
+} from './dto/akademik-tren-ip.dto';
 
 @ApiTags('Akademik')
 @Controller('akademik')
@@ -41,7 +46,7 @@ export class AkademikController {
   async getDistribusiNilai(
     @Query('angkatan') angkatan?: number,
     @Query('prodi') prodi?: string,
-  ): Promise<AkademikTotalArrayDto> {
+  ): Promise<AkademikDistribusiNilaiDto> {
     return this.akademikService.getDistribusiNilaiData(angkatan, prodi);
   }
 
@@ -49,7 +54,7 @@ export class AkademikController {
   @Get('tren-ip-rata-rata')
   async getTrenIpRataRata(
     @Query('angkatan') angkatan?: number,
-  ): Promise<AkademikTotalArrayDto> {
+  ): Promise<AkademikTrenIpRataRataDto> {
     return this.akademikService.getTrenIpRataRataData(angkatan);
   }
 
@@ -58,7 +63,7 @@ export class AkademikController {
   async getTrenIpTertinggi(
     @Query('semester') semester?: number,
     @Query('angkatan') angkatan?: number,
-  ): Promise<AkademikTotalArrayDto> {
+  ): Promise<AkademikTrenIpTertinggiDto> {
     return this.akademikService.getTrenIpTertinggiData(semester, angkatan);
   }
 }
