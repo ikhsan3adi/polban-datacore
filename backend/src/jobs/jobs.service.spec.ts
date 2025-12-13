@@ -88,7 +88,11 @@ describe('JobsService', () => {
   describe('addJobToQueue (Manual Trigger)', () => {
     it('should add job to queue with manual trigger', async () => {
       const dto: CreateJobDto = { jobName: JOB_NAMES.SYNC_MAHASISWA };
-      mockQueue.add.mockResolvedValue({ id: '123' });
+      const date = new Date();
+      mockQueue.add.mockResolvedValue({
+        id: '123',
+        timestamp: date.getTime(),
+      });
 
       const result = await service.addJobToQueue(dto);
 
@@ -96,7 +100,11 @@ describe('JobsService', () => {
         jobName: dto.jobName,
         triggeredBy: 'manual',
       });
-      expect(result).toEqual({ message: 'Job queued.', id: '123' });
+      expect(result).toEqual({
+        message: 'Job queued.',
+        queueId: '123',
+        timestamp: date,
+      });
     });
   });
 
