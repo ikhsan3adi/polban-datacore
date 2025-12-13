@@ -15,7 +15,8 @@ export interface DashboardStats {
   data: {
     totalMahasiswa: number;
     totalDosen: number;
-    totalDataAkademik: number;
+    totalDataAkademikNilai: number;
+    totalDataAkademikIp: number;
   };
 }
 

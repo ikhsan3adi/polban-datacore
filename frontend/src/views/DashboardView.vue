@@ -16,6 +16,7 @@ import {
     Users,
     GraduationCap,
     BookOpen,
+    ScrollText,
     Activity,
     Clock,
     RotateCw,
@@ -96,17 +97,17 @@ onMounted(() => {
 
         <div
             v-if="!stats && isLoading"
-            class="grid grid-cols-1 md:grid-cols-3 gap-6"
+            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
         >
             <div
                 class="h-32 bg-muted rounded-xl animate-pulse"
-                v-for="i in 3"
+                v-for="i in 4"
                 :key="i"
             ></div>
         </div>
 
         <div v-else-if="stats" class="space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <Card
                     class="border-l-4 border-l-primary shadow-sm hover:shadow-md transition-shadow"
                 >
@@ -125,7 +126,7 @@ onMounted(() => {
                             {{ formatNumber(stats.data.totalMahasiswa) }}
                         </div>
                         <p class="text-xs text-muted-foreground mt-1">
-                            Data profil aktif teragregasi
+                            Data profil aktif
                         </p>
                     </CardContent>
                 </Card>
@@ -148,7 +149,7 @@ onMounted(() => {
                             {{ formatNumber(stats.data.totalDosen) }}
                         </div>
                         <p class="text-xs text-muted-foreground mt-1">
-                            Data pengajar terdaftar
+                            Data pengajar
                         </p>
                     </CardContent>
                 </Card>
@@ -162,16 +163,41 @@ onMounted(() => {
                         <CardTitle
                             class="text-sm font-medium text-muted-foreground"
                         >
-                            Rekam Akademik
+                            Rekam Nilai
                         </CardTitle>
                         <BookOpen class="h-4 w-4 text-green-600" />
                     </CardHeader>
                     <CardContent>
                         <div class="text-2xl font-bold text-foreground">
-                            {{ formatNumber(stats.data.totalDataAkademik) }}
+                            {{
+                                formatNumber(stats.data.totalDataAkademikNilai)
+                            }}
                         </div>
                         <p class="text-xs text-muted-foreground mt-1">
-                            Nilai & IP Semester (Fact Tables)
+                            Detail Nilai Mata Kuliah
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <Card
+                    class="border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-shadow"
+                >
+                    <CardHeader
+                        class="flex flex-row items-center justify-between space-y-0 pb-2"
+                    >
+                        <CardTitle
+                            class="text-sm font-medium text-muted-foreground"
+                        >
+                            Rekam IP Semester
+                        </CardTitle>
+                        <ScrollText class="h-4 w-4 text-amber-600" />
+                    </CardHeader>
+                    <CardContent>
+                        <div class="text-2xl font-bold text-foreground">
+                            {{ formatNumber(stats.data.totalDataAkademikIp) }}
+                        </div>
+                        <p class="text-xs text-muted-foreground mt-1">
+                            Riwayat IPS & IPK
                         </p>
                     </CardContent>
                 </Card>
