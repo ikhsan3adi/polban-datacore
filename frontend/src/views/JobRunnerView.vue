@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { toast } from 'vue-sonner'; // Notification
+import { toast } from 'vue-sonner';
 import { jobsService } from '@/api/jobs.service';
 import type { JobLog, JobSchedule } from '@/types/job.types';
+import { JOB_NAME_OPTIONS } from '@/constants/job-names'; // Import Constant
 
 // Components
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -31,6 +32,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -42,6 +50,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  Plus, // Icon Tambah
+  Pencil, // Icon Edit
 } from 'lucide-vue-next';
 
 // --- STATE: JOB RUNNER ---
@@ -50,13 +60,29 @@ const isLoadingLogs = ref(false);
 const pagination = ref({ page: 1, lastPage: 1, total: 0 });
 const isRunningJob = ref(false);
 
+// State untuk Detail Log
+const selectedLog = ref<JobLog | null>(null);
+const isLogDetailOpen = ref(false);
+
+// Handler Buka Detail
+const openLogDetail = (log: JobLog) => {
+  selectedLog.value = log;
+  isLogDetailOpen.value = true;
+};
+
 // --- STATE: SCHEDULER ---
 const schedules = ref<JobSchedule[]>([]);
 const isLoadingSchedules = ref(false);
-const selectedSchedule = ref<JobSchedule | null>(null); // For Edit Dialog
-const isEditDialogOpen = ref(false);
+const isDialogOpen = ref(false);
 const isUpdatingSchedule = ref(false);
-const editForm = ref({ cron: '', description: '' });
+const dialogMode = ref<'create' | 'edit'>('create'); // Mode Dialog
+
+// Form State
+const editForm = ref({
+  jobName: '',
+  cron: '',
+  description: '',
+});
 
 // --- FORMATTERS ---
 const formatDate = (dateStr?: string) => {
@@ -75,7 +101,7 @@ const getStatusBadge = (status: string) => {
     case 'success':
       return 'bg-green-500 hover:bg-green-600';
     case 'failed':
-      return 'destructive'; // Shadcn destructive variant
+      return 'bg-red-500 dark:bg-red-600';
     case 'running':
       return 'bg-blue-500 hover:bg-blue-600 animate-pulse';
     case 'pending':
@@ -103,14 +129,15 @@ const fetchLogs = async (page = 1) => {
   }
 };
 
+// Updated: Accepts jobName argument
 const triggerJob = async (jobName = 'full-sync-and-aggregate') => {
   isRunningJob.value = true;
   try {
     const res = await jobsService.runJob(jobName);
-    toast.success('Job Berhasil Dipicu', {
+    toast.success(`Job ${jobName} Dipicu`, {
       description: `Queue ID: ${res.queueId}`,
     });
-    // Auto refresh logs after 2 seconds
+    // Auto refresh logs
     setTimeout(() => fetchLogs(1), 2000);
   } catch (err: any) {
     toast.error('Gagal memicu job', {
@@ -134,32 +161,56 @@ const fetchSchedules = async () => {
   }
 };
 
-const openEditDialog = (schedule: JobSchedule) => {
-  selectedSchedule.value = schedule;
+// Open Dialog for Create
+const openAddDialog = () => {
+  dialogMode.value = 'create';
   editForm.value = {
+    jobName: '',
+    cron: '',
+    description: '',
+  };
+  isDialogOpen.value = true;
+};
+
+// Open Dialog for Edit
+const openEditDialog = (schedule: JobSchedule) => {
+  dialogMode.value = 'edit';
+  editForm.value = {
+    jobName: schedule.jobName, // Readonly in edit mode
     cron: schedule.cronExpression,
     description: schedule.description || '',
   };
-  isEditDialogOpen.value = true;
+  isDialogOpen.value = true;
 };
 
 const saveSchedule = async () => {
-  if (!selectedSchedule.value) return;
+  if (!editForm.value.jobName || !editForm.value.cron) {
+    toast.error('Nama Job dan Cron Expression wajib diisi');
+    return;
+  }
 
   isUpdatingSchedule.value = true;
   try {
+    // Endpoint PUT menghandle create & update (Upsert)
     await jobsService.updateSchedule({
-      jobName: selectedSchedule.value.jobName,
+      jobName: editForm.value.jobName,
       cronExpression: editForm.value.cron,
       description: editForm.value.description,
     });
-    toast.success('Jadwal Berhasil Diupdate');
-    isEditDialogOpen.value = false;
+
+    toast.success(
+      dialogMode.value === 'create'
+        ? 'Jadwal Baru Ditambahkan'
+        : 'Jadwal Berhasil Diupdate',
+    );
+    isDialogOpen.value = false;
     fetchSchedules();
   } catch (err: any) {
-    toast.error('Gagal update jadwal', {
+    toast.error('Gagal menyimpan jadwal', {
       description:
-        err.response?.data?.message || 'Pastikan Cron Expression Valid',
+        err.response?.status != 500
+          ? err.response?.data?.message
+          : 'Pastikan Cron Expression Valid',
     });
   } finally {
     isUpdatingSchedule.value = false;
@@ -184,7 +235,7 @@ onMounted(() => {
         </p>
       </div>
       <Button
-        @click="triggerJob()"
+        @click="triggerJob('full-sync-and-aggregate')"
         :disabled="isRunningJob"
         class="shadow-lg shadow-primary/20"
       >
@@ -210,9 +261,9 @@ onMounted(() => {
             <div class="flex items-center justify-between">
               <div>
                 <CardTitle>Log Eksekusi</CardTitle>
-                <CardDescription
-                  >Daftar riwayat job yang telah dijalankan.</CardDescription
-                >
+                <CardDescription>
+                  Daftar riwayat job yang telah dijalankan.
+                </CardDescription>
               </div>
               <Button
                 variant="outline"
@@ -244,17 +295,24 @@ onMounted(() => {
                     <TableCell
                       colspan="5"
                       class="h-24 text-center text-muted-foreground"
-                      >Memuat data...</TableCell
                     >
+                      Memuat data...
+                    </TableCell>
                   </TableRow>
                   <TableRow v-else-if="logs.length === 0">
                     <TableCell
                       colspan="5"
                       class="h-24 text-center text-muted-foreground"
-                      >Belum ada riwayat job.</TableCell
                     >
+                      Belum ada riwayat job.
+                    </TableCell>
                   </TableRow>
-                  <TableRow v-for="log in logs" :key="log.id">
+                  <TableRow
+                    v-for="log in logs"
+                    :key="log.id"
+                    @click="openLogDetail(log)"
+                    class="cursor-pointer hover:bg-muted/50 transition-colors"
+                  >
                     <TableCell class="font-medium">{{ log.jobName }}</TableCell>
                     <TableCell>
                       <Badge variant="outline" class="capitalize">{{
@@ -265,13 +323,6 @@ onMounted(() => {
                       <Badge :class="getStatusBadge(log.status)">{{
                         log.status
                       }}</Badge>
-                      <div
-                        v-if="log.status === 'failed'"
-                        class="text-xs text-red-500 mt-1 max-w-50 truncate"
-                        :title="log.logMessage"
-                      >
-                        {{ log.logMessage }}
-                      </div>
                     </TableCell>
                     <TableCell class="text-xs">{{
                       formatDate(log.startTime)
@@ -294,8 +345,7 @@ onMounted(() => {
                 <ChevronLeft class="h-4 w-4" />
               </Button>
               <div class="text-sm font-medium">
-                Page {{ pagination.page }} of
-                {{ pagination.lastPage }}
+                Page {{ pagination.page }} of {{ pagination.lastPage }}
               </div>
               <Button
                 variant="outline"
@@ -318,24 +368,27 @@ onMounted(() => {
             <div class="flex items-center justify-between">
               <div>
                 <CardTitle>Jadwal Otomatis</CardTitle>
-                <CardDescription
-                  >Konfigurasi Cron Job untuk sinkronisasi
-                  otomatis.</CardDescription
-                >
+                <CardDescription>
+                  Konfigurasi Cron Job untuk sinkronisasi otomatis.
+                </CardDescription>
               </div>
-              <Button
-                variant="outline"
-                size="icon"
-                @click="fetchSchedules"
-                :disabled="isLoadingSchedules"
-              >
-                <RefreshCw
-                  class="w-4 h-4"
-                  :class="{
-                    'animate-spin': isLoadingSchedules,
-                  }"
-                />
-              </Button>
+              <div class="flex items-center gap-2">
+                <Button size="sm" @click="openAddDialog">
+                  <Plus class="w-4 h-4 mr-2" />
+                  Tambah Jadwal
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  @click="fetchSchedules"
+                  :disabled="isLoadingSchedules"
+                >
+                  <RefreshCw
+                    class="w-4 h-4"
+                    :class="{ 'animate-spin': isLoadingSchedules }"
+                  />
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -346,7 +399,7 @@ onMounted(() => {
                     <TableHead>Job Name</TableHead>
                     <TableHead>Cron Expression</TableHead>
                     <TableHead>Deskripsi</TableHead>
-                    <TableHead>Aksi</TableHead>
+                    <TableHead class="text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -359,13 +412,27 @@ onMounted(() => {
                       >
                     </TableCell>
                     <TableCell>{{ sch.description || '-' }}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        @click="openEditDialog(sch)"
-                        >Edit</Button
-                      >
+                    <TableCell class="text-right">
+                      <div class="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Jalankan Job Ini"
+                          @click="triggerJob(sch.jobName)"
+                          :disabled="isRunningJob"
+                        >
+                          <Play class="w-4 h-4 text-green-600" />
+                        </Button>
+
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          @click="openEditDialog(sch)"
+                          class="text-primary dark:text-muted font-semibold"
+                        >
+                          <Pencil class="w-3.5 h-3.5 mr-2" /> Edit
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 </TableBody>
@@ -376,18 +443,52 @@ onMounted(() => {
       </TabsContent>
     </Tabs>
 
-    <Dialog v-model:open="isEditDialogOpen">
+    <Dialog v-model:open="isDialogOpen">
       <DialogContent class="sm:max-w-125">
         <DialogHeader>
-          <DialogTitle
-            >Edit Jadwal: {{ selectedSchedule?.jobName }}</DialogTitle
-          >
+          <DialogTitle>
+            {{
+              dialogMode === 'create'
+                ? 'Tambah Jadwal Baru'
+                : `Edit Jadwal: ${editForm.jobName}`
+            }}
+          </DialogTitle>
           <DialogDescription>
-            Ubah konfigurasi waktu eksekusi job ini.
+            {{
+              dialogMode === 'create'
+                ? 'Pilih job dan atur jadwal cron.'
+                : 'Ubah konfigurasi waktu eksekusi job ini.'
+            }}
           </DialogDescription>
         </DialogHeader>
 
         <div class="grid gap-6 py-4">
+          <div class="grid gap-2">
+            <Label>Nama Job</Label>
+
+            <Select v-if="dialogMode === 'create'" v-model="editForm.jobName">
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih Job..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="option in JOB_NAME_OPTIONS"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Input
+              v-else
+              v-model="editForm.jobName"
+              readonly
+              class="bg-muted cursor-not-allowed font-medium"
+            />
+          </div>
+
           <div class="grid gap-2">
             <Label for="cron">Cron Expression</Label>
             <Input
@@ -415,16 +516,86 @@ onMounted(() => {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" @click="isEditDialogOpen = false"
-            >Batal</Button
-          >
+          <Button variant="outline" @click="isDialogOpen = false">Batal</Button>
           <Button @click="saveSchedule" :disabled="isUpdatingSchedule">
             <Loader2
               v-if="isUpdatingSchedule"
               class="mr-2 h-4 w-4 animate-spin"
             />
-            Simpan Perubahan
+            Simpan
           </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog v-model:open="isLogDetailOpen">
+      <DialogContent class="sm:max-w-150">
+        <DialogHeader>
+          <DialogTitle class="flex items-center gap-2">
+            <History class="w-5 h-5" /> Detail Eksekusi Job
+          </DialogTitle>
+          <DialogDescription>
+            ID: <span class="font-mono text-xs">{{ selectedLog?.id }}</span>
+          </DialogDescription>
+        </DialogHeader>
+
+        <div v-if="selectedLog" class="grid gap-6 py-2">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <Label class="text-xs text-muted-foreground">Nama Job</Label>
+              <p class="font-medium">{{ selectedLog.jobName }}</p>
+            </div>
+            <div class="space-y-1">
+              <Label class="text-xs text-muted-foreground">Status Akhir</Label>
+              <div>
+                <Badge :class="getStatusBadge(selectedLog.status)">
+                  {{ selectedLog.status }}
+                </Badge>
+              </div>
+            </div>
+            <div class="space-y-1">
+              <Label class="text-xs text-muted-foreground">Waktu Mulai</Label>
+              <p class="text-sm">{{ formatDate(selectedLog.startTime) }}</p>
+            </div>
+            <div class="space-y-1">
+              <Label class="text-xs text-muted-foreground">Waktu Selesai</Label>
+              <p class="text-sm">
+                {{ formatDate(selectedLog.endTime) || '-' }}
+              </p>
+            </div>
+            <div class="space-y-1">
+              <Label class="text-xs text-muted-foreground">Trigger</Label>
+              <p class="text-sm capitalize">{{ selectedLog.triggeredBy }}</p>
+            </div>
+            <div class="space-y-1">
+              <Label class="text-xs text-muted-foreground">Durasi</Label>
+              <p class="text-sm">{{ selectedLog.duration || '-' }}</p>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <Label class="text-sm font-semibold">
+              Log Output / Pesan Error
+            </Label>
+            <div
+              class="rounded-md bg-muted p-4 overflow-x-auto max-h-50 overflow-y-auto mt-2"
+            >
+              <pre
+                v-if="selectedLog.logMessage"
+                class="text-xs font-mono whitespace-pre-wrap"
+                >{{ selectedLog.logMessage }}</pre
+              >
+              <p v-else class="text-xs text-muted-foreground italic">
+                Tidak ada pesan log tambahan.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="secondary" @click="isLogDetailOpen = false"
+            >Tutup</Button
+          >
         </DialogFooter>
       </DialogContent>
     </Dialog>

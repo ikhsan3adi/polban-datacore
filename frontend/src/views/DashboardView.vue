@@ -234,10 +234,11 @@ onMounted(() => {
           <CardHeader>
             <CardTitle class="flex items-center gap-2">
               <Clock class="h-5 w-5 text-purple-500" />
-              Sinkronisasi Terakhir
+              Sinkronisasi & Agregasi Terakhir
             </CardTitle>
             <CardDescription
-              >Riwayat eksekusi job terakhir kali</CardDescription
+              >Riwayat eksekusi job sinkronisasi dan agregasi penuh terakhir
+              kali</CardDescription
             >
           </CardHeader>
           <CardContent class="space-y-4">

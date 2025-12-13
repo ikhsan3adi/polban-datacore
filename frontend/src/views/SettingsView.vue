@@ -142,9 +142,9 @@ const handleLogout = () => {
       </CardContent>
     </Card>
 
-    <Card class="border-red-200 dark:border-red-900/50">
+    <Card class="border-red-200 dark:border-red-500/50">
       <CardHeader>
-        <CardTitle class="flex items-center gap-2 text-destructive">
+        <CardTitle class="flex items-center gap-2 text-red-500">
           <ShieldAlert class="w-5 h-5" /> Zona Bahaya
         </CardTitle>
       </CardHeader>
@@ -154,7 +154,11 @@ const handleLogout = () => {
             Keluar dari sesi administrator saat ini. Anda perlu login kembali
             untuk mengakses dashboard.
           </p>
-          <Button variant="destructive" @click="handleLogout">
+          <Button
+            variant="destructive"
+            class="dark:bg-red-600"
+            @click="handleLogout"
+          >
             <LogOut class="w-4 h-4 mr-2" />
             Keluar
           </Button>
