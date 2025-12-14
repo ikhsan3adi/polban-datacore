@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsEnum } from 'class-validator';
+import { IsNotEmpty, IsString, IsEnum, IsBoolean } from 'class-validator';
 import { JOB_NAMES } from '../../constants';
 
 export class UpdateScheduleDto {
@@ -7,10 +7,31 @@ export class UpdateScheduleDto {
   @IsEnum(Object.values(JOB_NAMES))
   jobName: string;
 
-  @IsNotEmpty()
-  @IsString()
-  cronExpression: string;
+  @IsBoolean()
+  isActive?: boolean;
 
   @IsString()
-  description: string;
+  cronExpression?: string;
+
+  @IsString()
+  description?: string;
+}
+
+export class DeleteScheduleDto {
+  @IsNotEmpty()
+  @IsString()
+  @IsEnum(Object.values(JOB_NAMES), {
+    message: `jobName must be one of: ${Object.values(JOB_NAMES).join(', ')}`,
+  })
+  jobName: string;
+}
+
+export interface JobSchedule {
+  id: string;
+  jobName: string;
+  cronExpression: string;
+  description?: string;
+  isActive: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }

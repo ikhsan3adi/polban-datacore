@@ -4,7 +4,7 @@ import { JobsRepository } from './jobs.repository';
 import { getQueueToken } from '@nestjs/bullmq';
 import { QUEUE_CONSTANTS, JOB_NAMES } from '../constants';
 import { CreateJobDto } from './dto/create-job.dto';
-import { UpdateScheduleDto } from './dto/schedule-job.dto';
+import { DeleteScheduleDto, UpdateScheduleDto } from './dto/schedule-job.dto';
 
 describe('JobsService', () => {
   let service: JobsService;
@@ -21,6 +21,7 @@ describe('JobsService', () => {
     findAllSchedules: jest.fn(),
     findScheduleByName: jest.fn(),
     upsertSchedule: jest.fn(),
+    deleteSchedule: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -49,6 +50,9 @@ describe('JobsService', () => {
   describe('onModuleInit', () => {
     it('should initialize default schedule if not exists', async () => {
       mockJobsRepository.findScheduleByName.mockResolvedValue(null);
+      mockJobsRepository.upsertSchedule.mockResolvedValue({
+        cronExpression: '0 0 * * *',
+      });
       mockQueue.getJobSchedulers.mockResolvedValue([]);
       mockQueue.add.mockResolvedValue({ id: 'job-1' });
 
@@ -60,6 +64,7 @@ describe('JobsService', () => {
       // upsertSchedule logic called inside updateSchedule
       expect(repository.upsertSchedule).toHaveBeenCalledWith(
         JOB_NAMES.FULL_SYNC_AND_AGGREGATE,
+        true,
         '0 0 * * *',
         expect.any(String),
       );
@@ -112,6 +117,7 @@ describe('JobsService', () => {
     it('should update DB and sync BullMQ schedule', async () => {
       const dto: UpdateScheduleDto = {
         jobName: JOB_NAMES.AGGREGATE_GUEST_DATA,
+        isActive: true,
         cronExpression: '*/5 * * * *',
         description: 'Every 5 mins',
       };
@@ -121,11 +127,14 @@ describe('JobsService', () => {
         { name: JOB_NAMES.AGGREGATE_GUEST_DATA, key: 'old-key' },
       ]);
 
+      mockJobsRepository.upsertSchedule.mockResolvedValue(dto);
+
       await service.updateSchedule(dto);
 
       // 1. Update DB
       expect(repository.upsertSchedule).toHaveBeenCalledWith(
         dto.jobName,
+        dto.isActive,
         dto.cronExpression,
         dto.description,
       );
@@ -141,6 +150,34 @@ describe('JobsService', () => {
         }),
       );
     });
+
+    it('should update DB and remove/deactivate BullMQ schedule', async () => {
+      const dto: UpdateScheduleDto = {
+        jobName: JOB_NAMES.AGGREGATE_GUEST_DATA,
+        isActive: false,
+      };
+
+      // Mock remove old scheduler logic
+      mockQueue.getJobSchedulers.mockResolvedValue([
+        { name: JOB_NAMES.AGGREGATE_GUEST_DATA, key: 'old-key' },
+      ]);
+
+      mockJobsRepository.upsertSchedule.mockResolvedValue(dto);
+
+      await service.updateSchedule(dto);
+
+      // 1. Update DB
+      expect(repository.upsertSchedule).toHaveBeenCalledWith(
+        dto.jobName,
+        dto.isActive,
+        undefined,
+        undefined,
+      );
+
+      // 2. Sync BullMQ (Remove Old -> Not Add New)
+      expect(queue.removeJobScheduler).toHaveBeenCalledWith('old-key');
+      expect(queue.add).not.toHaveBeenCalled();
+    });
   });
 
   describe('getSchedules', () => {
@@ -152,6 +189,25 @@ describe('JobsService', () => {
 
       expect(repository.findAllSchedules).toHaveBeenCalled();
       expect(result).toEqual({ data: mockSchedules });
+    });
+  });
+
+  describe('deleteSchedule', () => {
+    it('should delete & deactivate scheduled job', async () => {
+      const dto: DeleteScheduleDto = {
+        jobName: JOB_NAMES.AGGREGATE_GUEST_DATA,
+      };
+
+      // Mock remove old scheduler logic
+      mockQueue.getJobSchedulers.mockResolvedValue([
+        { name: JOB_NAMES.AGGREGATE_GUEST_DATA, key: 'old-key' },
+      ]);
+
+      await service.deleteSchedule(dto);
+
+      expect(repository.deleteSchedule).toHaveBeenCalledWith(dto.jobName);
+      expect(queue.removeJobScheduler).toHaveBeenCalledWith('old-key');
+      expect(queue.add).not.toHaveBeenCalled();
     });
   });
 });
