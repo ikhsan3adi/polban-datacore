@@ -20,3 +20,5 @@ export const JOB_NAMES = {
   // Menjalankan semuanya berurutan
   FULL_SYNC_AND_AGGREGATE: 'full-sync-and-aggregate',
 };
+
+export const ALLOWED_JOB_NAMES = Object.values(JOB_NAMES);
